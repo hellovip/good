@@ -1,0 +1,130 @@
+<html ng-app="conciseQuizApp">
+<head>
+<meta charset="UTF-8">
+<title>Example - example-example26-production</title>
+<script src="bower_components/jquery/dist/jquery.js"></script>
+<script src="bower_components/angular2/angular.js"></script>
+<script src="bower_components/bootstrap/dist/js/bootstrap.js"></script>
+<link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.css">
+<title>Concise Developer Quiz</title>
+
+<script type="text/javascript">
+$(function(){
+    $('#successModal').on('hidden.bs.modal', function () {
+        location.reload();
+    });
+});
+</script>
+
+<script type="text/javascript">
+
+    var conciseQuizApp = angular.module('conciseQuizApp', []);
+
+    conciseQuizApp.controller('ConciseQuiz', function ($scope,$http) {
+
+        $scope.welcome = "Welcome to the Concise Developer Quiz";
+        $scope.quizData = {};
+        $scope.errors = {};
+
+        $scope.getQuestions = function() {
+            $http.get('questions.json')
+            .success(function(data, status) {
+               $scope.questions = data;
+               $scope.quizData.name = "";
+               for(var i=0;i<data.length;i++) {
+                    var q = 'question'+parseInt(i+2)+'';
+                    $scope.quizData[''+q+''] = '';
+               }
+            })
+            .error(function(data, status) {
+                console.log("Failed to get questions.json",data,status);  
+            });
+        };
+
+        $scope.setName = function(){
+            if($scope.quizData.name && $scope.quizData.name.length > 2) {
+                $scope.welcome = "Welcome to the Concise Developer Quiz, " + $scope.quizData.name;
+            } else {
+                $scope.welcome = "Welcome to the Concise Developer Quiz";
+            }
+        };
+    
+        $scope.sendAnswers = function() {
+            console.log($scope.quizData);
+            $http.post('conciseQuiz.php', $.param( $scope.quizData ), { 
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'} 
+            })
+            .success(function(data) {
+                console.log(data);
+                if (!data.success) {
+                    console.log('Has errors!:',data.errors);
+                    $scope.errors = {}
+                    for(var index in data.errors) { 
+                          $scope.errors[index] = data.errors[index]
+                    }
+                } else {
+                    $scope.errors = {};
+                    $scope.successMessage = data.message;
+                    $('#successModal').modal("show")
+                }
+            })
+            .error(function(data, status) {
+                console.log("Failed to send answers to php",data,status);
+            });
+
+        };
+        $scope.getQuestions();
+    });
+
+</script>
+</head>
+<body ng-controller="ConciseQuiz">
+
+<div class="container">
+    <div class="row">
+        <div class="col-xs-12">
+
+            <h1>Quiz</h1>
+            <h2>{{welcome}}</h2>
+
+            <form ng-submit="sendAnswers()">
+                <ol>
+                    <li class="form-group" ng-class="{ 'has-error' : errors.name }">
+                        <label for="exampleInputEmail1">Please enter your name</label>
+                        <input ng-model="quizData.name" ng-change="setName()" type="text" class="form-control" id="exampleInputEmail1" placeholder="Enter your name :-)">
+                        <span class="help-block" ng-show="errors.name != ''">{{ errors.name }}</span>
+                    </li>
+                    <li ng-repeat="question in questions" ng-class="{ 'has-error' : errors.question{{$index + 2}} }">
+                        <h3>{{question.question}}</h3>
+                        <div ng-repeat="option in question.options" class="radio">
+                            <label>
+                                <input ng-model="quizData['question'+($parent.$index + 2)]" type="radio" name="question{{$parent.$index + 2}}" value="{{option}}">
+                                {{option}}
+                            </label>
+                        </div>
+                        <span class="help-block" ng-show="errors.question{{$index + 2}} != ''">{{errors['question' + ($index + 2)]}}</span>
+                    </li>
+                </ol>
+                <button type="submit" class="btn btn-default">Submit</button>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="successModal" tabindex="-1" role="dialog" aria-labelledby="successModal" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <h4 class="modal-title" id="myModalLabel">Concise Developer Test</h4>
+            </div>
+            <div class="modal-body">
+                {{successMessage}}
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
